@@ -7,19 +7,26 @@ const int BTTN0 = 2;
 const int BTTN1 = 10;
 const int BTTN2 = 11;
 const int BTTN3 = 12;
+const int TILT = A0;
+const int BUZZER = 13;
 const int SERVO_PIN = 3;
+
 const int SET_PSWD = 0;
 const int LOCKED = 1;
 const int UNLOCKED = 2;
+
 int sys_state = SET_PSWD;
 int password[] = {-1, -1, -1, -1};
 int pass_len = 0;
 int guess[] = {-1, -1, -1, -1};
 int guess_len = 0;
+int servo_pos = 0;
+
 bool pass_updated = false;
+bool alarm_tripped = false;
+
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 Servo lock;
-int servo_pos = 0;
 
 void setup() {
   lcd.begin(16, 2);
@@ -32,6 +39,7 @@ void setup() {
   pinMode(BTTN1, INPUT);
   pinMode(BTTN2, INPUT);
   pinMode(BTTN3, INPUT);
+  pinMode(TILT, INPUT);
   Serial.begin(9600);
 
   lock.attach(SERVO_PIN);
@@ -89,6 +97,14 @@ void loop() {
     case LOCKED:
       lcd.setCursor(0, 0);
       lcd.print("LOCK enter pswd:");
+      
+      if (read_button_state(TILT) == HIGH) {
+        alarm_tripped = true;
+      }
+      if (alarm_tripped == true) {
+        tone(BUZZER, 750, 50);
+      }
+      
       if (state_0 + state_1 + state_2 + state_3 == 1 && pass_updated == false) {
         if (state_0 == HIGH) {
           guess[guess_len] = 0;
@@ -120,10 +136,13 @@ void loop() {
         if (pass_match() == true){
           lcd.clear();
           lcd.print("PASS correct");
+          tone(BUZZER, 1000, 500);
           sys_state = UNLOCKED;
+          alarm_tripped = false;
           unlock_safe();
         } else {
           lcd.print("PASS incorrect  ");
+          tone(BUZZER, 500, 500);
         }
         guess[0] = -1;
         guess[1] = -1;
